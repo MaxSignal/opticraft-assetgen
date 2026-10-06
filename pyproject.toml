@@ -19,4 +19,10 @@ packages = ["opticraft_assetgen"]
 version = {attr = "opticraft_assetgen.__version__"}
 
 [tool.setuptools.package-data]
-opticraft_assetgen = ["data/*.png", "data/legacy/*.png"]
+opticraft_assetgen = [
+    "data/*.png",
+    "data/legacy/*.png",
+    "data/legacy/tutorial/*",
+    "data/legacy/tutorial/region/*",
+    "data/legacy/tutorial/DIM-1/region/*",
+]

@@ -6,8 +6,8 @@ own copy of **Minecraft 1.2.5**.
 OptiCraft draws Minecraft's textures, fonts and texts, which cannot be
 redistributed. This tool takes them from the Minecraft 1.2.5 client jar that
 the Minecraft launcher installs on your computer, adds OptiCraft's own Legacy
-UI art (shipped in `opticraft_assetgen/data/`), and writes the pack the
-calculator program reads. Nothing is downloaded.
+UI art and tutorial world (shipped in `opticraft_assetgen/data/`), and writes
+the pack the calculator program reads. Nothing is downloaded.
 
 ## Requirements
 
@@ -47,8 +47,7 @@ Options:
 | Option | |
 | --- | --- |
 | `-o`, `--output PATH` | where to write the pack (default `assets.pak.tns`) |
-| `--opticraft-pak PATH` | also take the files of an OptiCraft release `assets.pak` that neither the jar nor this tool provide, such as the tutorial world |
-| `--no-tutorial` | with `--opticraft-pak`, leave the tutorial world out (about 12 MB) |
+| `--no-tutorial` | leave out the tutorial world that ships with this tool (about 12 MB); the rest of the game is unaffected |
 
 Or install it as a command:
 
@@ -57,29 +56,14 @@ pip install .
 opticraft-assetgen <Minecraft folder>
 ```
 
-## Without Minecraft: from an OptiCraft release
-
-If you have the `assets.pak` of an OptiCraft release (or its unpacked `data`
-folder), the pack can be built from it directly:
-
-```sh
-python3 -m opticraft_assetgen --opticraft-pak assets.pak
-```
-
-Its `assets/` files are used as they are, including the tutorial world
-(`--no-tutorial` leaves it out); sounds are left out.
-
 ## What goes into the pack
 
 | Source | Files |
 | --- | --- |
 | Your Minecraft 1.2.5 jar | every resource in it (textures, fonts, languages, texts), unchanged, under `assets/`; the compiled classes and `META-INF` are left out |
-| This tool (`opticraft_assetgen/data/`) | OptiCraft's Legacy UI art (`legacy/`: title logo, menu panorama, startup logos, checkbox and tip sprites) and `cursor.png` |
-| `--opticraft-pak` (optional) | the rest of an OptiCraft release pack: the tutorial world, OptiFine's connected-glass texture `ctm.png`, ... |
+| This tool (`opticraft_assetgen/data/`) | OptiCraft's Legacy UI art (`legacy/`: title logo, menu panorama, startup logos, checkbox and tip sprites), `cursor.png`, and the tutorial world (`legacy/tutorial/`, unless `--no-tutorial`) |
 
-Without `--opticraft-pak` the game runs normally; only the tutorial world is
-missing and glass does not connect. The calculator build has no sound, so
-sounds are never included.
+The calculator build has no sound, so sounds are never included.
 
 The jar is checked before anything is written: a jar from Minecraft 1.5 or
 later, or one without the core 1.2 textures, is refused; missing optional

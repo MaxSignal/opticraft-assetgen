@@ -72,6 +72,18 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(report.warnings, [])
         self.assertEqual(report.count, len(files))
 
+    def test_bundled_tutorial_world(self):
+        make_jar(self.jar)
+        build.build(self.jar, self.out)
+        files = mcpk.read_pak(self.out)
+        self.assertIn("assets/legacy/tutorial/level.dat", files)
+        self.assertIn("assets/legacy/tutorial/region/r.0.0.mca", files)
+        self.assertNotIn("assets/ctm.png", files)
+        build.build(self.jar, self.out, tutorial=False)
+        files = mcpk.read_pak(self.out)
+        self.assertFalse(any(name.startswith("assets/legacy/tutorial/") for name in files))
+        self.assertIn("assets/legacy/title.png", files)
+
     def test_jar_file_wins_over_bundle(self):
         make_jar(self.jar, extra={"cursor.png": b"mine"})
         build.build(self.jar, self.out)
@@ -106,90 +118,6 @@ class BuildTests(unittest.TestCase):
             f.write(b"not a zip")
         with self.assertRaises(jarsource.JarError):
             build.build(self.jar, self.out)
-
-    def test_opticraft_pak_fills_gaps(self):
-        entries = make_jar(self.jar)
-        release = os.path.join(self.dir, "release.pak")
-        mcpk.write_pak(release, {
-            "assets/terrain.png": b"release terrain",          # jar wins
-            "assets/ctm.png": b"ctm",                           # added
-            "assets/legacy/tutorial/level.dat": b"world",       # added
-            "assets/legacy/tutorial/session.lock": b"lock",     # never needed
-            "resources/newsound/step/grass1.ogg": b"sound",     # no sound on Nspire
-        })
-        report = build.build(self.jar, self.out, release)
-        files = mcpk.read_pak(self.out)
-        self.assertEqual(files["assets/terrain.png"], entries["terrain.png"])
-        self.assertEqual(files["assets/ctm.png"], b"ctm")
-        self.assertIn("assets/legacy/tutorial/level.dat", files)
-        self.assertNotIn("assets/legacy/tutorial/session.lock", files)
-        self.assertFalse(any(name.startswith("resources/") for name in files))
-        self.assertEqual(report.from_opticraft_pak, 2)
-
-        build.build(self.jar, self.out, release, tutorial=False)
-        self.assertNotIn("assets/legacy/tutorial/level.dat", mcpk.read_pak(self.out))
-
-
-class FromOptiCraftTests(unittest.TestCase):
-    RELEASE = {
-        "assets/terrain.png": b"terrain",
-        "assets/legacy/title.png": b"release title",
-        "assets/legacy/tutorial/level.dat": b"world",
-        "assets/legacy/tutorial/session.lock": b"lock",
-        "resources/newsound/step/grass1.ogg": b"sound",
-    }
-
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.dir = self.tmp.name
-        self.out = os.path.join(self.dir, "assets.pak.tns")
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
-    def check(self, files, tutorial=True):
-        self.assertEqual(files["assets/terrain.png"], b"terrain")
-        self.assertEqual(files["assets/legacy/title.png"], b"release title")  # the release's own wins
-        self.assertIn("assets/cursor.png", files)                             # bundled fills the gap
-        self.assertNotIn("assets/legacy/tutorial/session.lock", files)
-        self.assertFalse(any(name.startswith("resources/") for name in files))
-        self.assertEqual("assets/legacy/tutorial/level.dat" in files, tutorial)
-
-    def test_from_pak(self):
-        release = os.path.join(self.dir, "assets.pak")
-        mcpk.write_pak(release, self.RELEASE)
-        report = build.build_from_opticraft(release, self.out)
-        self.check(mcpk.read_pak(self.out))
-        self.assertEqual(report.from_opticraft_pak, 3)
-        build.build_from_opticraft(release, self.out, tutorial=False)
-        self.check(mcpk.read_pak(self.out), tutorial=False)
-
-    def test_from_data_folder(self):
-        data = os.path.join(self.dir, "data")
-        for name, content in self.RELEASE.items():
-            os.makedirs(os.path.dirname(os.path.join(data, name)), exist_ok=True)
-            with open(os.path.join(data, name), "wb") as f:
-                f.write(content)
-        build.build_from_opticraft(data, self.out)
-        self.check(mcpk.read_pak(self.out))
-
-    def test_rejects_other_files(self):
-        path = os.path.join(self.dir, "not.pak")
-        with open(path, "wb") as f:
-            f.write(b"not a pak at all, just some bytes padding the header out")
-        with self.assertRaises(build.OptiCraftPakError):
-            build.build_from_opticraft(path, self.out)
-        empty = os.path.join(self.dir, "empty.pak")
-        mcpk.write_pak(empty, {"assets/lang/en_US.lang": b""})
-        with self.assertRaises(build.OptiCraftPakError):
-            build.build_from_opticraft(empty, self.out)
-
-    def test_cli(self):
-        release = os.path.join(self.dir, "assets.pak")
-        mcpk.write_pak(release, self.RELEASE)
-        self.assertEqual(cli.main(["--opticraft-pak", release, "-o", self.out, "--no-tutorial"]), 0)
-        self.check(mcpk.read_pak(self.out), tutorial=False)
-        self.assertEqual(cli.main(["--opticraft-pak", os.path.join(self.dir, "missing"), "-o", self.out]), 2)
 
 
 class CliTests(unittest.TestCase):
@@ -238,6 +166,18 @@ class CliTests(unittest.TestCase):
     def test_folder_without_jar(self):
         self.assertEqual(self.run_with(self.dir), 2)
         self.assertEqual(self.run_with(os.path.join(self.dir, "missing")), 2)
+
+    def test_no_tutorial_option(self):
+        jar = os.path.join(self.dir, "1.2.5.jar")
+        make_jar(jar)
+        self.assertEqual(cli.main([jar, "-o", self.out, "--no-tutorial"]), 0)
+        self.assertFalse(any(n.startswith("assets/legacy/tutorial/") for n in mcpk.read_pak(self.out)))
+        self.assertEqual(cli.main([jar, "-o", self.out]), 0)
+        self.assertIn("assets/legacy/tutorial/level.dat", mcpk.read_pak(self.out))
+
+    def test_import_option_is_gone(self):
+        with self.assertRaises(SystemExit):
+            cli.main(["--opticraft-pak", "assets.pak"])
 
     def test_folder_is_required(self):
         self.assertEqual(cli.main(["-o", self.out]), 2)
