@@ -17,36 +17,35 @@ calculator program reads. Nothing is downloaded.
 ## Getting the Minecraft 1.2.5 jar
 
 In the Minecraft launcher: **Installations → New installation**, choose the
-version **release 1.2.5**, create it and press **Play** once. The launcher
-then keeps the jar at
+version **release 1.2.5**, create it and press **Play** once. The jar is then
+in the launcher's game folder, which depends on your system and launcher.
+Usually:
 
-| System | Path |
+| Launcher | Game folder |
 | --- | --- |
-| Windows | `%APPDATA%\.minecraft\versions\1.2.5\1.2.5.jar` |
-| macOS | `~/Library/Application Support/minecraft/versions/1.2.5/1.2.5.jar` |
-| Linux | `~/.minecraft/versions/1.2.5/1.2.5.jar` |
-
-The tool also looks in Prism Launcher's and MultiMC's `libraries` folders
-and in the old launcher's `.minecraft/bin/minecraft.jar`.
+| Official, Windows | `%APPDATA%\.minecraft` |
+| Official, macOS | `~/Library/Application Support/minecraft` |
+| Official, Linux | `~/.minecraft` |
+| Prism Launcher | its data folder (Settings → Launcher → Folders) |
 
 ## Usage
 
-From the top of this repository:
+From the top of this repository, giving your Minecraft folder:
 
 ```sh
-python3 -m opticraft_assetgen
+python3 -m opticraft_assetgen <Minecraft folder>
 ```
 
-This finds the jar, writes `assets.pak.tns` in the current folder and checks
-it. Copy that file to the calculator next to `opticraft.tns`, keeping the
-name `assets.pak.tns`.
+for example `python3 -m opticraft_assetgen ~/.minecraft`. The folder can be
+the game folder, its `versions/1.2.5` folder, or the `1.2.5.jar` file itself;
+the tool does not search on its own. It writes `assets.pak.tns` in the current
+folder and checks it. Copy that file to the calculator into the same folder as
+the OptiCraft program, keeping the name `assets.pak.tns`.
 
 Options:
 
 | Option | |
 | --- | --- |
-| `--jar PATH` | use this jar (or an unpacked copy of it) instead of searching |
-| `--minecraft-dir DIR` | search this game folder instead of the default one |
 | `-o`, `--output PATH` | where to write the pack (default `assets.pak.tns`) |
 | `--opticraft-pak PATH` | also take the files of an OptiCraft release `assets.pak` that neither the jar nor this tool provide, such as the tutorial world |
 | `--no-tutorial` | with `--opticraft-pak`, leave the tutorial world out (about 12 MB) |
@@ -55,7 +54,7 @@ Or install it as a command:
 
 ```sh
 pip install .
-opticraft-assetgen --help
+opticraft-assetgen <Minecraft folder>
 ```
 
 ## What goes into the pack
@@ -98,7 +97,7 @@ tree is `opticraft`, branch `nspire-port`).
 ```text
 opticraft_assetgen/
   cli.py        command line
-  locate.py     finding the 1.2.5 jar in launcher folders
+  locate.py     finding the 1.2.5 jar in the folder given
   jarsource.py  reading and checking the jar
   build.py      assembling the pack
   mcpk.py       writing and reading MCPK

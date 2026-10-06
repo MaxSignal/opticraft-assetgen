@@ -131,18 +131,55 @@ class BuildTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
-    def test_finds_jar_in_minecraft_dir(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            game = os.path.join(tmp, ".minecraft")
-            os.makedirs(os.path.join(game, "versions", "1.2.5"))
-            make_jar(os.path.join(game, "versions", "1.2.5", "1.2.5.jar"))
-            out = os.path.join(tmp, "assets.pak.tns")
-            self.assertEqual(cli.main(["--minecraft-dir", game, "-o", out]), 0)
-            self.assertIn("assets/terrain.png", mcpk.read_pak(out))
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = self.tmp.name
+        self.out = os.path.join(self.dir, "assets.pak.tns")
 
-    def test_reports_missing_jar(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(cli.main(["--minecraft-dir", tmp, "-o", os.path.join(tmp, "x")]), 2)
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def run_with(self, path):
+        code = cli.main([path, "-o", self.out])
+        if code == 0:
+            self.assertIn("assets/terrain.png", mcpk.read_pak(self.out))
+        return code
+
+    def test_game_folder(self):
+        game = os.path.join(self.dir, ".minecraft")
+        os.makedirs(os.path.join(game, "versions", "1.2.5"))
+        make_jar(os.path.join(game, "versions", "1.2.5", "1.2.5.jar"))
+        self.assertEqual(self.run_with(game), 0)
+
+    def test_versions_folder_and_jar(self):
+        version = os.path.join(self.dir, "versions", "1.2.5")
+        os.makedirs(version)
+        jar = os.path.join(version, "1.2.5.jar")
+        make_jar(jar)
+        self.assertEqual(self.run_with(version), 0)
+        self.assertEqual(self.run_with(jar), 0)
+
+    def test_prism_data_folder(self):
+        lib = os.path.join(self.dir, "libraries", "com", "mojang", "minecraft", "1.2.5")
+        os.makedirs(lib)
+        make_jar(os.path.join(lib, "minecraft-1.2.5-client.jar"))
+        self.assertEqual(self.run_with(self.dir), 0)
+
+    def test_unpacked_jar_folder(self):
+        jar = os.path.join(self.dir, "1.2.5.zip")
+        make_jar(jar)
+        unpacked = os.path.join(self.dir, "unpacked")
+        with zipfile.ZipFile(jar) as z:
+            z.extractall(unpacked)
+        self.assertEqual(self.run_with(unpacked), 0)
+
+    def test_folder_without_jar(self):
+        self.assertEqual(self.run_with(self.dir), 2)
+        self.assertEqual(self.run_with(os.path.join(self.dir, "missing")), 2)
+
+    def test_folder_is_required(self):
+        self.assertEqual(cli.main(["-o", self.out]), 2)
+        self.assertFalse(os.path.exists(self.out))
 
 
 if __name__ == "__main__":
