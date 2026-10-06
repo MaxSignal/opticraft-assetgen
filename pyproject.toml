@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opticraft-assetgen"
+description = "Build the OptiCraft for TI-Nspire asset pack from your own Minecraft 1.2.5"
+requires-python = ">=3.8"
+dynamic = ["version"]
+readme = "README.md"
+
+[project.scripts]
+opticraft-assetgen = "opticraft_assetgen.cli:main"
+
+[tool.setuptools]
+packages = ["opticraft_assetgen"]
+
+[tool.setuptools.dynamic]
+version = {attr = "opticraft_assetgen.__version__"}
+
+[tool.setuptools.package-data]
+opticraft_assetgen = ["data/*.png", "data/legacy/*.png"]
