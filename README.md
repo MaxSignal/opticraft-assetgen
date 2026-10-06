@@ -57,6 +57,18 @@ pip install .
 opticraft-assetgen <Minecraft folder>
 ```
 
+## Without Minecraft: from an OptiCraft release
+
+If you have the `assets.pak` of an OptiCraft release (or its unpacked `data`
+folder), the pack can be built from it directly:
+
+```sh
+python3 -m opticraft_assetgen --opticraft-pak assets.pak
+```
+
+Its `assets/` files are used as they are, including the tutorial world
+(`--no-tutorial` leaves it out); sounds are left out.
+
 ## What goes into the pack
 
 | Source | Files |

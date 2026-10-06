@@ -130,6 +130,68 @@ class BuildTests(unittest.TestCase):
         self.assertNotIn("assets/legacy/tutorial/level.dat", mcpk.read_pak(self.out))
 
 
+class FromOptiCraftTests(unittest.TestCase):
+    RELEASE = {
+        "assets/terrain.png": b"terrain",
+        "assets/legacy/title.png": b"release title",
+        "assets/legacy/tutorial/level.dat": b"world",
+        "assets/legacy/tutorial/session.lock": b"lock",
+        "resources/newsound/step/grass1.ogg": b"sound",
+    }
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = self.tmp.name
+        self.out = os.path.join(self.dir, "assets.pak.tns")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def check(self, files, tutorial=True):
+        self.assertEqual(files["assets/terrain.png"], b"terrain")
+        self.assertEqual(files["assets/legacy/title.png"], b"release title")  # the release's own wins
+        self.assertIn("assets/cursor.png", files)                             # bundled fills the gap
+        self.assertNotIn("assets/legacy/tutorial/session.lock", files)
+        self.assertFalse(any(name.startswith("resources/") for name in files))
+        self.assertEqual("assets/legacy/tutorial/level.dat" in files, tutorial)
+
+    def test_from_pak(self):
+        release = os.path.join(self.dir, "assets.pak")
+        mcpk.write_pak(release, self.RELEASE)
+        report = build.build_from_opticraft(release, self.out)
+        self.check(mcpk.read_pak(self.out))
+        self.assertEqual(report.from_opticraft_pak, 3)
+        build.build_from_opticraft(release, self.out, tutorial=False)
+        self.check(mcpk.read_pak(self.out), tutorial=False)
+
+    def test_from_data_folder(self):
+        data = os.path.join(self.dir, "data")
+        for name, content in self.RELEASE.items():
+            os.makedirs(os.path.dirname(os.path.join(data, name)), exist_ok=True)
+            with open(os.path.join(data, name), "wb") as f:
+                f.write(content)
+        build.build_from_opticraft(data, self.out)
+        self.check(mcpk.read_pak(self.out))
+
+    def test_rejects_other_files(self):
+        path = os.path.join(self.dir, "not.pak")
+        with open(path, "wb") as f:
+            f.write(b"not a pak at all, just some bytes padding the header out")
+        with self.assertRaises(build.OptiCraftPakError):
+            build.build_from_opticraft(path, self.out)
+        empty = os.path.join(self.dir, "empty.pak")
+        mcpk.write_pak(empty, {"assets/lang/en_US.lang": b""})
+        with self.assertRaises(build.OptiCraftPakError):
+            build.build_from_opticraft(empty, self.out)
+
+    def test_cli(self):
+        release = os.path.join(self.dir, "assets.pak")
+        mcpk.write_pak(release, self.RELEASE)
+        self.assertEqual(cli.main(["--opticraft-pak", release, "-o", self.out, "--no-tutorial"]), 0)
+        self.check(mcpk.read_pak(self.out), tutorial=False)
+        self.assertEqual(cli.main(["--opticraft-pak", os.path.join(self.dir, "missing"), "-o", self.out]), 2)
+
+
 class CliTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
